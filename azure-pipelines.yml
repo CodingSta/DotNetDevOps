@@ -1,40 +1,38 @@
-trigger:
-- master
-  
-pool:
-  vmImage: 'ubuntu-18.04'
-  
-  steps:
-  - task: UseDotNet@2
-    displayName: 'Use .NET Core sdk 5.x'
-    inputs:
-      packageType: 'sdk'
-      version: 5.x
-    
-  - task: DotNetCoreCLI@2
-    displayName: 'dotnet restore'
-    inputs:
-      command: restore
-      projects: '**/*.csproj'
-      feedsToUse: 'config'
-      nugetConfigPath: 'nuget.config'
+stages:
+  - stage: Build
+    jobs:
+    - job: Build
+      steps:
+      - task: UseDotNet@2
+        displayName: 'Use .NET Core sdk 5.x'
+        inputs:
+          packageType: 'sdk'
+          version: 5.x
+        
+      - task: DotNetCoreCLI@2
+        displayName: 'dotnet restore'
+        inputs:
+          command: restore
+          projects: '**/*.csproj'
 
-  - task: DotNetCoreCLI@2
-    inputs:
-      command: 'build'
-      projects: '**/*.csproj'
-      arguments: '--configuration $(BuildConfiguration)'
-  
-  - task: DotNetCoreCLI@2
-    inputs:
-      command: 'test'
-      projects: '**/*.Tests.csproj'
-      arguments: '--configuration $(BuildConfiguration)'
-  
-  - task: DotNetCoreCLI@2
-    displayName: Publish
-    inputs:
-      command: publish
-      publishWebProjects: True
-      arguments: '--configuration $(BuildConfiguration) --output "$(build.artifactstagingdirectory)"'
-      zipAfterPublish: True
+      - task: DotNetCoreCLI@2
+        inputs:
+          command: 'build'
+          projects: '**/*.csproj'
+      
+      - task: DotNetCoreCLI@2
+        inputs:
+          command: 'test'
+          projects: '**/*.Tests.csproj'
+
+      - task: ArchiveFiles@2
+        displayName: 'Archive files'
+        inputs:
+          rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+          includeRootFolder: false
+          archiveType: zip
+          archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+          replaceExistingArchive: true
+
+      - upload: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+        artifact: drop
